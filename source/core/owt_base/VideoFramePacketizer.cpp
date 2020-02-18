@@ -58,8 +58,7 @@ bool VideoFramePacketizer::init(bool enableRed, bool enableUlpfec, bool enableTr
     m_transport_send = std::make_unique<RtpTransportControllerSend>(
         m_clock, event_log.get(), nullptr/*network_state_predictor_factory*/,
         nullptr/*network_controller_factory*/, BitrateConstraints(),
-        ProcessThread::Create("PacerThread"), m_task_queue_factory.get(),
-        m_field_trial_config.get());
+        ProcessThread::Create("PacerThread"), m_task_queue_factory.get());
     m_transport_send->RegisterTargetTransferRateObserver(this);
 
     RtpRtcp::Configuration configuration;
@@ -104,8 +103,6 @@ bool VideoFramePacketizer::init(bool enableRed, bool enableUlpfec, bool enableTr
     m_senderVideo = std::make_unique<RTPSenderVideo>(video_config);
     // m_params = std::make_unique<RtpPayloadParams>(m_ssrc, nullptr);
     m_taskRunner->RegisterModule(m_rtpRtcp.get());
-
-    m_bandwidth_estimation = std::make_unique<SendSideBandwidthEstimation>(event_log);
 
     return true;
 }
@@ -167,7 +164,7 @@ int VideoFramePacketizer::deliverFeedback_(std::shared_ptr<erizo::DataPacket> da
 
 bool VideoFramePacketizer::SendRtp(const uint8_t* data, size_t len, const webrtc::PacketOptions& options)
 {
-    receiveRtpData(reinterpret_cast<char*>(const_cast<uint8_t*>(data)), len, dataType, 0);
+    receiveRtpData(reinterpret_cast<char*>(const_cast<uint8_t*>(data)), len, erizoExtra::VIDEO, 0);
     if (options.packet_id != -1) {
         rtc::SentPacket sent_packet;
         sent_packet.packet_id = options.packet_id;
@@ -186,7 +183,7 @@ bool VideoFramePacketizer::SendRtcp(const uint8_t* data, size_t len)
     const RTCPHeader* chead = reinterpret_cast<const RTCPHeader*>(data);
     uint8_t packetType = chead->getPacketType();
     if (packetType == RTCP_Sender_PT) {
-        receiveRtpData(reinterpret_cast<char*>(const_cast<uint8_t*>(data)), len, dataType, 0);
+        receiveRtpData(reinterpret_cast<char*>(const_cast<uint8_t*>(data)), len, erizoExtra::VIDEO, 0);
         return true;
     }
     return false;
