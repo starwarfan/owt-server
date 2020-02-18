@@ -165,7 +165,7 @@ int VideoFramePacketizer::deliverFeedback_(std::shared_ptr<erizo::DataPacket> da
     return 0;
 }
 
-bool VideoFrameConstructor::SendRtp(const uint8_t* data, size_t len, const webrtc::PacketOptions& options)
+bool VideoFramePacketizer::SendRtp(const uint8_t* data, size_t len, const webrtc::PacketOptions& options)
 {
     receiveRtpData(reinterpret_cast<char*>(const_cast<uint8_t*>(data)), len, dataType, 0);
     if (options.packet_id != -1) {
@@ -181,7 +181,7 @@ bool VideoFrameConstructor::SendRtp(const uint8_t* data, size_t len, const webrt
     return true;
 }
 
-bool VideoFrameConstructor::SendRtcp(const uint8_t* data, size_t len)
+bool VideoFramePacketizer::SendRtcp(const uint8_t* data, size_t len)
 {
     const RTCPHeader* chead = reinterpret_cast<const RTCPHeader*>(data);
     uint8_t packetType = chead->getPacketType();
