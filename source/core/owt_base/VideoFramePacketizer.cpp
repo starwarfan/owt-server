@@ -203,7 +203,7 @@ void VideoFramePacketizer::receiveRtpData(char* buf, int len, erizoExtra::DataTy
     video_sink_->deliverVideoData(std::make_shared<erizo::DataPacket>(0, buf, len, erizo::VIDEO_PACKET));
 }
 
-void VideoFramePacketizer::OnTargetTransferRate(TargetTransferRate msg) {
+void VideoFramePacketizer::OnTargetTransferRate(webrtc::TargetTransferRate msg) {
   uint32_t target_bitrate_bps = msg.target_rate.bps();
   RTC_LOG(LS_WARNING) << "OnTargetTransferRate(bps): " << target_bitrate_bps;
 }

@@ -76,7 +76,7 @@ public:
     void OnLocalSsrcChanged(uint32_t old_ssrc, uint32_t new_ssrc) { }
 
     // Implements webrtc::TargetTransferRateObserver
-    virtual void OnTargetTransferRate(TargetTransferRate) override;
+    virtual void OnTargetTransferRate(webrtc::TargetTransferRate) override;
 
 private:
     bool init(bool enableRed, bool enableUlpfec, bool enableTransportcc, uint32_t transportccExt);
