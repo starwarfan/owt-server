@@ -6,7 +6,6 @@
 #define VideoFramePacketizer_h
 
 #include "WebRTCTaskRunner.h"
-#include "WebRTCTransport.h"
 #include "MediaFramePipeline.h"
 #include "SsrcGenerator.h"
 
@@ -16,11 +15,13 @@
 #include <boost/scoped_ptr.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/shared_mutex.hpp>
-#include <logger.h>
 #include <modules/rtp_rtcp/include/rtp_rtcp.h>
 #include <modules/rtp_rtcp/include/rtp_rtcp_defines.h>
 #include <modules/rtp_rtcp/source/rtp_sender_video.h>
+#include <api/transport/network_control.h>
 #include <api/transport/field_trial_based_config.h>
+#include <api/task_queue/default_task_queue_factory.h>
+#include <call/rtp_transport_controller_send_interface.h>
 
 #include <rtc_base/random.h>
 #include <rtc_base/time_utils.h>
@@ -36,9 +37,9 @@ class VideoFramePacketizer : public FrameDestination,
                              public erizo::MediaSource,
                              public erizo::FeedbackSink,
                              public erizoExtra::RTPDataReceiver,
-                             public webrtc::RtcpIntraFrameObserver {
-    DECLARE_LOGGER();
-
+                             public webrtc::Transport,
+                             public webrtc::RtcpIntraFrameObserver,
+                             public webrtc::TargetTransferRateObserver {
 public:
     VideoFramePacketizer(bool enableRed,
                          bool enableUlpfec,
@@ -59,6 +60,12 @@ public:
     // Implements erizo::MediaSource.
     int sendFirPacket();
 
+    // Implements webrtc::Transport
+    bool SendRtp(const uint8_t* packet,
+                 size_t length,
+                 const webrtc::PacketOptions& options) override;
+    bool SendRtcp(const uint8_t* packet, size_t length) override;
+
     // Implements RTPDataReceiver.
     void receiveRtpData(char*, int len, erizoExtra::DataType, uint32_t channelId);
 
@@ -67,6 +74,9 @@ public:
     void OnReceivedSLI(uint32_t ssrc, uint8_t picture_id) { }
     void OnReceivedRPSI(uint32_t ssrc, uint64_t picture_id) { }
     void OnLocalSsrcChanged(uint32_t old_ssrc, uint32_t new_ssrc) { }
+
+    // Implements webrtc::TargetTransferRateObserver
+    virtual void OnTargetTransferRate(TargetTransferRate) override;
 
 private:
     bool init(bool enableRed, bool enableUlpfec, bool enableTransportcc, uint32_t transportccExt);
@@ -87,7 +97,7 @@ private:
     std::unique_ptr<webrtc::RtpRtcp> m_rtpRtcp;
     boost::shared_mutex m_rtpRtcpMutex;
 
-    boost::shared_ptr<webrtc::Transport> m_videoTransport;
+    // boost::shared_ptr<webrtc::Transport> m_videoTransport;
     boost::shared_ptr<WebRTCTaskRunner> m_taskRunner;
     FrameFormat m_frameFormat;
     uint16_t m_frameWidth;
@@ -106,6 +116,8 @@ private:
     std::unique_ptr<webrtc::RTPSenderVideo> m_senderVideo;
     std::unique_ptr<webrtc::PlayoutDelayOracle> m_playout_delay_oracle;
     std::unique_ptr<webrtc::FieldTrialBasedConfig> m_field_trial_config;
+    std::unique_ptr<webrtc::TaskQueueFactory> m_task_queue_factory;
+    std::unique_ptr<webrtc::RtpTransportControllerSendInterface> m_transport_send;
 };
 
 }
