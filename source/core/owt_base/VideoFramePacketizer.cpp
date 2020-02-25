@@ -201,8 +201,8 @@ void VideoFramePacketizer::receiveRtpData(char* buf, int len, erizoExtra::DataTy
 }
 
 void VideoFramePacketizer::OnTargetTransferRate(webrtc::TargetTransferRate msg) {
-  uint32_t target_bitrate_bps = msg.target_rate.bps();
-  RTC_LOG(LS_WARNING) << "OnTargetTransferRate(bps): " << target_bitrate_bps;
+  m_estimatedBitrateBps = msg.target_rate.bps();
+  RTC_LOG(LS_INFO) << "OnTargetTransferRate(bps): " << m_estimatedBitrateBps;
 }
 
 static int getNextNaluPosition(uint8_t *buffer, int buffer_size, bool &is_aud_or_sei) {

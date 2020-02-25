@@ -52,6 +52,7 @@ public:
     void unbindTransport();
     void enable(bool enabled);
     uint32_t getSsrc() { return m_ssrc; }
+    uint32_t getEstimatedBitrate() { return m_estimatedBitrateBps; }
 
     // Implements FrameDestination.
     void onFrame(const Frame&);
@@ -118,6 +119,8 @@ private:
     std::unique_ptr<webrtc::FieldTrialBasedConfig> m_field_trial_config;
     std::unique_ptr<webrtc::TaskQueueFactory> m_task_queue_factory;
     std::unique_ptr<webrtc::RtpTransportControllerSendInterface> m_transport_send;
+
+    uint32_t m_estimatedBitrateBps = 0;
 };
 
 }
