@@ -28,8 +28,8 @@ class WebRTCTaskRunner;
  * This is the class to send out the audio frame with a given format.
  */
 class AudioFramePacketizer : public FrameDestination,
-                             public erizo::MediaSource,
-                             public erizo::FeedbackSink,
+                             public owt_base::PacketSource,
+                             public owt_base::FeedbackSink,
                              public erizoExtra::RTPDataReceiver {
     DECLARE_LOGGER();
 
@@ -37,7 +37,7 @@ public:
     AudioFramePacketizer();
     ~AudioFramePacketizer();
 
-    void bindTransport(erizo::MediaSink* sink);
+    void bindTransport(owt_base::PacketSink* sink);
     void unbindTransport();
     void enable(bool enabled) {m_enabled = enabled;}
     uint32_t getSsrc() { return m_ssrc; }
@@ -54,10 +54,8 @@ private:
     void close();
     void updateSeqNo(uint8_t* rtp);
 
-    // Implement erizo::FeedbackSink
-    int deliverFeedback_(std::shared_ptr<erizo::DataPacket> data_packet);
-    // Implement erizo::MediaSource
-    int sendPLI();
+    // Implement owt_base::FeedbackSink
+    int deliverFeedback(char* data, int len);
 
     bool m_enabled;
     boost::shared_mutex m_rtpRtcpMutex;

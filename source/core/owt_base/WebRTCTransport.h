@@ -5,7 +5,7 @@
 #ifndef WebRTCTransport_h
 #define WebRTCTransport_h
 
-#include <MediaDefinitions.h>
+#include <PacketDefinitions.h>
 #include <MediaDefinitionExtra.h>
 #include <rtputils.h>
 #include <common_types.h>
@@ -15,9 +15,9 @@
 namespace owt_base {
 
 template<erizoExtra::DataType dataType>
-class WebRTCTransport : public webrtc::Transport, public erizo::FeedbackSource {
+class WebRTCTransport : public webrtc::Transport, public owt_base::FeedbackSource {
 public:
-    WebRTCTransport(erizoExtra::RTPDataReceiver*, erizo::FeedbackSink*);
+    WebRTCTransport(erizoExtra::RTPDataReceiver*, owt_base::FeedbackSink*);
     virtual ~WebRTCTransport();
 
     virtual bool SendRtp(const uint8_t* data, size_t len, const webrtc::PacketOptions& options);
@@ -27,7 +27,7 @@ private:
 };
 
 template<erizoExtra::DataType dataType>
-WebRTCTransport<dataType>::WebRTCTransport(erizoExtra::RTPDataReceiver* rtpReceiver, erizo::FeedbackSink* feedbackSink)
+WebRTCTransport<dataType>::WebRTCTransport(erizoExtra::RTPDataReceiver* rtpReceiver, owt_base::FeedbackSink* feedbackSink)
     : m_rtpReceiver(rtpReceiver)
 {
     fb_sink_ = feedbackSink;

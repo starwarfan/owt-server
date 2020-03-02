@@ -57,12 +57,12 @@ VideoFramePacketizer::~VideoFramePacketizer()
     boost::unique_lock<boost::shared_mutex> lock(m_rtpRtcpMutex);
 }
 
-void VideoFramePacketizer::bindTransport(erizo::MediaSink* sink)
+void VideoFramePacketizer::bindTransport(owt_base::PacketSink* sink)
 {
     boost::unique_lock<boost::shared_mutex> lock(m_transportMutex);
     video_sink_ = sink;
     video_sink_->setVideoSinkSSRC(m_rtpRtcp->SSRC());
-    erizo::FeedbackSource* fbSource = video_sink_->getFeedbackSource();
+    owt_base::FeedbackSource* fbSource = video_sink_->getFeedbackSource();
     if (fbSource)
         fbSource->setFeedbackSink(this);
 }
@@ -94,12 +94,12 @@ void VideoFramePacketizer::OnReceivedIntraFrameRequest(uint32_t ssrc)
     deliverFeedbackMsg(feedback);
 }
 
-int VideoFramePacketizer::deliverFeedback_(std::shared_ptr<erizo::DataPacket> data_packet)
+int VideoFramePacketizer::deliverFeedback_(char* data, int len)
 {
     boost::shared_lock<boost::shared_mutex> lock(m_rtpRtcpMutex);
     if (m_rtpRtcp) {
-        m_rtpRtcp->IncomingRtcpPacket(reinterpret_cast<uint8_t*>(data_packet->data), data_packet->length);
-        return data_packet->length;
+        m_rtpRtcp->IncomingRtcpPacket(reinterpret_cast<uint8_t*>(data), len);
+        return len;
     }
     return 0;
 }
@@ -113,7 +113,7 @@ void VideoFramePacketizer::receiveRtpData(char* buf, int len, erizoExtra::DataTy
 
     assert(type == erizoExtra::VIDEO);
     // ELOG_WARN("receiveRtpData %p", buf);
-    video_sink_->deliverVideoData(std::make_shared<erizo::DataPacket>(0, buf, len, erizo::VIDEO_PACKET));
+    video_sink_->deliverVideoData(buf, len);
 }
 
 static int getNextNaluPosition(uint8_t *buffer, int buffer_size, bool &is_aud_or_sei) {
