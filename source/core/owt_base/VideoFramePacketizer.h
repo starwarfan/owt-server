@@ -10,7 +10,7 @@
 #include "MediaFramePipeline.h"
 #include "SsrcGenerator.h"
 
-#include <PacketDefinitions.h>
+#include <MediaDefinitions.h>
 #include <MediaDefinitionExtra.h>
 
 #include <boost/scoped_ptr.hpp>
@@ -33,8 +33,8 @@ namespace owt_base {
  * It also gives the feedback to the encoder based on the feedback from the remote.
  */
 class VideoFramePacketizer : public FrameDestination,
-                             public owt_base::PacketSource,
-                             public owt_base::FeedbackSink,
+                             public erizo::MediaSource,
+                             public erizo::FeedbackSink,
                              public erizoExtra::RTPDataReceiver,
                              public webrtc::RtcpIntraFrameObserver {
     DECLARE_LOGGER();
@@ -47,15 +47,17 @@ public:
                          uint32_t transportccExt = 0);
     ~VideoFramePacketizer();
 
-    void bindTransport(owt_base::PacketSink* sink);
+    void bindTransport(erizo::MediaSink* sink);
     void unbindTransport();
     void enable(bool enabled);
     uint32_t getSsrc() { return m_ssrc; }
-    int sendFirPacket();
 
     // Implements FrameDestination.
     void onFrame(const Frame&);
     void onVideoSourceChanged() override;
+
+    // Implements erizo::MediaSource.
+    int sendFirPacket();
 
     // Implements RTPDataReceiver.
     void receiveRtpData(char*, int len, erizoExtra::DataType, uint32_t channelId);
@@ -70,8 +72,10 @@ private:
     bool init(bool enableRed, bool enableUlpfec, bool enableTransportcc, uint32_t transportccExt);
     void close();
 
-    // Implement owt_base::FeedbackSink
-    int deliverFeedback(char* data, int len) override;
+    // Implement erizo::FeedbackSink
+    int deliverFeedback_(std::shared_ptr<erizo::DataPacket> data_packet);
+    // Implement erizo::MediaSource
+    int sendPLI();
 
     bool m_enabled;
     bool m_enableDump;

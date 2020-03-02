@@ -1,32 +1,32 @@
-#ifndef OWT_BASE_MEDIA_WRAPPER_H_
-#define OWT_BASE_MEDIA_WRAPPER_H_
+#ifndef ERIZOAPI_MEDIADEFINITIONS_H_
+#define ERIZOAPI_MEDIADEFINITIONS_H_
 
 #include <nan.h>
-#include <PacketDefinitions.h>
+#include <MediaDefinitions.h>
 
 /*
- * Wrapper class of owt_base::PacketSink
+ * Wrapper class of erizo::MediaSink
  */
 class MediaSink : public Nan::ObjectWrap {
  public:
-    owt_base::PacketSink* msink;
+    erizo::MediaSink* msink;
 };
 
 /*
- * Wrapper class of owt_base::PacketSource
+ * Wrapper class of erizo::MediaSource
  */
 class MediaSource : public Nan::ObjectWrap {
  public:
-    owt_base::PacketSource* msource;
+    erizo::MediaSource* msource;
 };
 
 /*
- * Wrapper class of both owt_base::PacketSink and owt_base::PacketSource
+ * Wrapper class of both erizo::MediaSink and erizo::MediaSource
  */
 class MediaFilter : public Nan::ObjectWrap {
  public:
-    owt_base::PacketSink* msink;
-    owt_base::PacketSource* msource;
+    erizo::MediaSink* msink;
+    erizo::MediaSource* msource;
 };
 
-#endif  // OWT_BASE_MEDIA_WRAPPER_H_
+#endif  // ERIZOAPI_MEDIADEFINITIONS_H_

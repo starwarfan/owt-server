@@ -9,7 +9,7 @@
 #include "WebRTCTransport.h"
 
 #include <boost/scoped_ptr.hpp>
-#include <PacketDefinitions.h>
+#include <MediaDefinitions.h>
 #include <MediaDefinitionExtra.h>
 
 #include <JobTimer.h>
@@ -34,8 +34,8 @@ public:
  * A class to process the incoming streams by leveraging video coding module from
  * webrtc engine, which will framize the frames.
  */
-class VideoFrameConstructor : public owt_base::PacketSink,
-                              public owt_base::FeedbackSource,
+class VideoFrameConstructor : public erizo::MediaSink,
+                              public erizo::FeedbackSource,
                               public FrameSource,
                               public JobTimerListener,
                               public rtc::VideoSinkInterface<webrtc::VideoFrame>,
@@ -51,7 +51,7 @@ public:
     VideoFrameConstructor(VideoFrameConstructor*, VideoInfoListener*, uint32_t transportccExtId = 0);
     virtual ~VideoFrameConstructor();
 
-    void bindTransport(owt_base::PacketSource* source, owt_base::FeedbackSink* fbSink);
+    void bindTransport(erizo::MediaSource* source, erizo::FeedbackSink* fbSink);
     void unbindTransport();
     void enable(bool enabled);
 
@@ -106,9 +106,10 @@ private:
 
     Config m_config;
 
-    // Implement owt_base::PacketSink
-    int deliverAudioData(char* data, int len) override;
-    int deliverVideoData(char* data, int len) override;
+    // Implement erizo::MediaSink
+    int deliverAudioData_(std::shared_ptr<erizo::DataPacket> audio_packet) override;
+    int deliverVideoData_(std::shared_ptr<erizo::DataPacket> video_packet) override;
+    int deliverEvent_(erizo::MediaEventPtr event) override;
     void close();
 
     bool m_enabled;

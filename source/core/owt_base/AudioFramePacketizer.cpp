@@ -39,12 +39,12 @@ AudioFramePacketizer::~AudioFramePacketizer()
     boost::unique_lock<boost::shared_mutex> lock(m_rtpRtcpMutex);
 }
 
-void AudioFramePacketizer::bindTransport(owt_base::PacketSink* sink)
+void AudioFramePacketizer::bindTransport(erizo::MediaSink* sink)
 {
     boost::unique_lock<boost::shared_mutex> lock(m_transport_mutex);
     audio_sink_ = sink;
     audio_sink_->setAudioSinkSSRC(m_rtpRtcp->SSRC());
-    owt_base::FeedbackSource* fbSource = audio_sink_->getFeedbackSource();
+    erizo::FeedbackSource* fbSource = audio_sink_->getFeedbackSource();
     if (fbSource)
         fbSource->setFeedbackSink(this);
 }
@@ -57,11 +57,11 @@ void AudioFramePacketizer::unbindTransport()
     }
 }
 
-int AudioFramePacketizer::deliverFeedback(char* data, int len)
+int AudioFramePacketizer::deliverFeedback_(std::shared_ptr<erizo::DataPacket> data_packet)
 {
     boost::shared_lock<boost::shared_mutex> lock(m_rtpRtcpMutex);
-    m_rtpRtcp->IncomingRtcpPacket(reinterpret_cast<uint8_t*>(data), len);
-    return len;
+    m_rtpRtcp->IncomingRtcpPacket(reinterpret_cast<uint8_t*>(data_packet->data), data_packet->length);
+    return data_packet->length;
 }
 
 void AudioFramePacketizer::receiveRtpData(char* buf, int len, erizoExtra::DataType type, uint32_t channelId)
@@ -72,7 +72,7 @@ void AudioFramePacketizer::receiveRtpData(char* buf, int len, erizoExtra::DataTy
     }
 
     assert(type == erizoExtra::AUDIO);
-    audio_sink_->deliverAudioData(buf, len);
+    audio_sink_->deliverAudioData(std::make_shared<erizo::DataPacket>(0, buf, len, erizo::AUDIO_PACKET));
 }
 
 
@@ -97,7 +97,7 @@ void AudioFramePacketizer::onFrame(const Frame& frame)
 
     if (frame.additionalInfo.audio.isRtpPacket) { // FIXME: Temporarily use Frame to carry rtp-packets due to the premature AudioFrameConstructor implementation.
         updateSeqNo(frame.payload);
-        audio_sink_->deliverAudioData(frame.payload, frame.length);
+        audio_sink_->deliverAudioData(std::make_shared<erizo::DataPacket>(0, reinterpret_cast<char*>(frame.payload), frame.length, erizo::AUDIO_PACKET));
         return;
     }
     lock1.unlock();
@@ -179,6 +179,10 @@ void AudioFramePacketizer::updateSeqNo(uint8_t* rtp) {
     }
     m_lastOriginSeqNo = originSeqNo;
     *(reinterpret_cast<uint16_t*>(&rtp[2])) = htons(m_seqNo);
+}
+
+int AudioFramePacketizer::sendPLI() {
+    return 0;
 }
 
 }

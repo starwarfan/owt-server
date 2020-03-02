@@ -3,7 +3,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "VideoFrameConstructor.h"
-#include <MediaDefinitions.h>
 
 #include <rtputils.h>
 #include <common_types.h>
@@ -330,9 +329,9 @@ std::unique_ptr<webrtc::VideoDecoder> VideoFrameConstructor::CreateVideoDecoder(
     return std::make_unique<AdaptorDecoder>(this);
 }
 
-int VideoFrameConstructor::deliverVideoData(char* data, int len)
+int VideoFrameConstructor::deliverVideoData_(std::shared_ptr<erizo::DataPacket> video_packet)
 {
-    RTCPHeader* chead = reinterpret_cast<RTCPHeader*>(data);
+    RTCPHeader* chead = reinterpret_cast<RTCPHeader*>(video_packet->data);
     uint8_t packetType = chead->getPacketType();
 
     assert(packetType != RTCP_Receiver_PT && packetType != RTCP_PS_Feedback_PT && packetType != RTCP_RTP_Feedback_PT);
@@ -344,7 +343,7 @@ int VideoFrameConstructor::deliverVideoData(char* data, int len)
         return 0;
     }
 
-    RTPHeader* head = reinterpret_cast<RTPHeader*>(data);
+    RTPHeader* head = reinterpret_cast<RTPHeader*>(video_packet->data);
     if (!m_ssrc && head->getSSRC()) {
         m_ssrc = head->getSSRC();
         maybeCreateReceiveVideo(m_ssrc);
@@ -352,8 +351,7 @@ int VideoFrameConstructor::deliverVideoData(char* data, int len)
 
     // TODO: since framer and connection are built with different libc++,
     // shard_ptr must be recreated due to abi issues
-    std::shared_ptr<erizo::DataPacket> wp =
-        std::make_shared<erizo::DataPacket>(0, data, len, erizo::VIDEO_PACKET);
+    std::shared_ptr<erizo::DataPacket> wp = std::make_shared<erizo::DataPacket>(*video_packet);
     m_taskQueue->PostTask([this, wp]() {
         if (m_call) {
             m_call->Receiver()->DeliverPacket(
@@ -362,10 +360,10 @@ int VideoFrameConstructor::deliverVideoData(char* data, int len)
                 rtc::TimeUTCMicros());
         }
     });
-    return len;
+    return video_packet->length;
 }
 
-int VideoFrameConstructor::deliverAudioData(char* data, int len)
+int VideoFrameConstructor::deliverAudioData_(std::shared_ptr<erizo::DataPacket> audio_packet)
 {
     assert(false);
     return 0;
@@ -393,6 +391,10 @@ void VideoFrameConstructor::onFeedback(const FeedbackMsg& msg)
     }
 }
 
+int VideoFrameConstructor::deliverEvent_(erizo::MediaEventPtr event){
+    return 0;
+}
+
 bool VideoFrameConstructor::SendRtp(const uint8_t* data, size_t len, const webrtc::PacketOptions& options)
 {
     return true;
@@ -401,7 +403,9 @@ bool VideoFrameConstructor::SendRtp(const uint8_t* data, size_t len, const webrt
 bool VideoFrameConstructor::SendRtcp(const uint8_t* data, size_t len)
 {
     if (fb_sink_) {
-        fb_sink_->deliverFeedback(reinterpret_cast<uint8_t*>(data), len);
+        fb_sink_->deliverFeedback(
+            std::make_shared<erizo::DataPacket>(0,
+                reinterpret_cast<char*>(const_cast<uint8_t*>(data)), len, erizo::VIDEO_PACKET));
         return true;
     }
     return false;
