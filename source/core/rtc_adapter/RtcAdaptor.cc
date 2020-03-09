@@ -59,9 +59,44 @@ RtcAdaptorImpl::~RtcAdaptorImpl() {
 
 }
 
-VideoReceiveAdaptor* RtcAdaptorImpl::createVideoReceiver() {
+void RtcAdaptorImpl::initCall() {
+    m_taskQueue->PostTask([this]() {
+        // Initialize call
+        if (!m_call) {
+            webrtc::Call::Config call_config(m_eventLog.get());
+            call_config.task_queue_factory = m_taskQueueFactory.get();
+            m_call.reset(webrtc::Call::Create(call_config));
+        }
+    });
+}
+
+VideoReceiveAdaptor* RtcAdaptorImpl::createVideoReceiver(const Config& config) {
     initCall();
-    return VideoReceiverAdaptorImpl(this);
+    return new VideoReceiveAdaptorImpl(this, config);
+}
+
+void RtcAdaptorImpl::destoryVideoReceiver(VideoReceiveAdaptor* video_recv_adaptor) {
+    delete video_recv_adaptor;
+}
+
+VideoSendAdaptor* RtcAdaptorImpl::createVideoSender(const Config& config)  {
+    return new VideoSendAdaptorImpl(this, config);
+}
+void RtcAdaptorImpl::destoryVideoSender(VideoSendAdaptor* video_send_adaptor) {
+    delete video_send_adaptor;
+}
+
+AudioReceiveAdaptor* RtcAdaptorImpl::createAudioReceiver(const Config& config) {
+    return nullptr;
+}
+void RtcAdaptorImpl::destoryAudioReceiver(AudioReceiveAdaptor* audio_recv_adaptor) {}
+
+AudioSendAdaptor* RtcAdaptorImpl::createAudioSender(const Config& config) {
+    return new AudioSendAdaptorImpl(this, config);
+}
+
+void RtcAdaptorImpl::destoryAudioSender(AudioSendAdaptor* audio_send_adaptor) {
+    delete audio_send_adaptor;
 }
 
 } // namespace rtc_adaptor

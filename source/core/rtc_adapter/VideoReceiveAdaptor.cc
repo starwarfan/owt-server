@@ -19,8 +19,7 @@ const uint32_t kBufferSize = 8192;
 // Local SSRC has no meaning for receive stream here
 const uint32_t kLocalSsrc = 1;
 
-static void dump(void* index, FrameFormat format, uint8_t* buf, int len)
-{
+static void dump(void* index, FrameFormat format, uint8_t* buf, int len) {
     char dumpFileName[128];
 
     snprintf(dumpFileName, 128, "/tmp/postConstructor-%p.%s", index, getFormatStr(format));
@@ -44,6 +43,16 @@ int32_t VideoReceiveAdaptorImpl::AdaptorDecoder::InitDecode(const webrtc::VideoC
     return 0;
 }
 
+struct DataPacket {
+    DataPacket() = default;
+    DataPacket(const char *data_, int length_)
+        : length{length_} {
+        memcpy(data, data_, length_);
+    }
+
+    char data[1500];
+    int length;
+};
 
 int32_t VideoReceiveAdaptorImpl::AdaptorDecoder::Decode(const webrtc::EncodedImage& encodedImage,
                                                       bool missing_frames,
@@ -109,12 +118,12 @@ int32_t VideoReceiveAdaptorImpl::AdaptorDecoder::Decode(const webrtc::EncodedIma
             if (notifyStats) {
                 AdaptorStats stats = {
                     m_parent->m_width,
-                    m_parent->height,
+                    m_parent->m_height,
                     m_parent->m_format,
                     0
                 };
                 // RTC_DLOG(LS_INFO) << "Video update:";
-                m_parent->m_statsListener->onAdaptorStat(stats);
+                m_parent->m_statsListener->onAdaptorStats(stats);
             }
         }
         // Dump for debug use
@@ -130,29 +139,29 @@ int32_t VideoReceiveAdaptorImpl::AdaptorDecoder::Decode(const webrtc::EncodedIma
     return 0;
 }
 
-VideoReceiveAdaptorImpl::VideoReceiveAdaptorImpl(CallOwner* owner)
+VideoReceiveAdaptorImpl::VideoReceiveAdaptorImpl(CallOwner* owner, const RtcAdaptor::Config& config)
     : m_enableDump(false)
-    , m_ssrc(0)
+    , m_config(config)
     , m_format(owt_base::FRAME_FORMAT_UNKNOWN)
     , m_width(0)
     , m_height(0)
-    , m_frameListener(nullptr),
-    , m_feedbackListener(nullptr),
-    , m_statsListener(nullptr),
+    , m_frameListener(config.frame_listener),
+    , m_rtcpListener(config.rtp_listener),
+    , m_statsListener(config.stats_listener),
     , m_isWaitingKeyFrame(false)
     , m_owner(owner) {
     assert(m_owner != nullptr);
+    CreateReceiveVideo();
 }
 
-VideoReceiveAdaptorImpl::~VideoReceiveAdaptorImpl()
-{
+VideoReceiveAdaptorImpl::~VideoReceiveAdaptorImpl() {
     std::promise<int> p;
     std::future<int> f = p.get_future();
-    m_owner->m_taskQueue->PostTask([this, &p]() {
-        if (m_owner->m_call) {
+    taskQueue()->PostTask([this, &p]() {
+        if (call()) {
             if (m_videoRecvStream) {
                 m_videoRecvStream->Stop();
-                m_owner->m_call->DestroyVideoReceiveStream(m_videoRecvStream);
+                call()->DestroyVideoReceiveStream(m_videoRecvStream);
                 m_videoRecvStream = nullptr;
             }
         }
@@ -161,17 +170,17 @@ VideoReceiveAdaptorImpl::~VideoReceiveAdaptorImpl()
     f.wait();
 }
 
-void VideoFrameConstructor::OnFrame(const webrtc::VideoFrame& video_frame) {}
+void VideoReceiveAdaptorImpl::OnFrame(const webrtc::VideoFrame& video_frame) {}
 
-void VideoFrameConstructor::maybeCreateReceiveVideo(uint32_t ssrc) {
-    m_taskQueue->PostTask([this, ssrc]() {
-        if (m_call && !m_videoRecvStream) {
-            RTC_DLOG(LS_INFO) << "Create VideoReceiveStream with SSRC: " << ssrc;
+void VideoReceiveAdaptorImpl::CreateReceiveVideo() {
+    taskQueue()->PostTask([this]() {
+        if (call() && !m_videoRecvStream) {
+            RTC_DLOG(LS_INFO) << "Create VideoReceiveStream with SSRC: " << m_config.ssrc;
             // Create Receive Video Stream
             webrtc::VideoReceiveStream::Config default_config(this);
             default_config.rtp.local_ssrc = kLocalSsrc;
             default_config.rtp.rtcp_mode = webrtc::RtcpMode::kReducedSize;
-            default_config.rtp.remote_ssrc = m_ssrc;
+            default_config.rtp.remote_ssrc = m_config.ssrc;
             default_config.rtp.red_payload_type = RED_90000_PT;
             if (m_config.transport_cc) {
                 RTC_DLOG(LS_INFO) << "TransportSequenceNumber Extension Enabled";
@@ -226,9 +235,61 @@ void VideoFrameConstructor::maybeCreateReceiveVideo(uint32_t ssrc) {
             video_recv_config.decoders.push_back(decoder);
 
             RTC_DLOG(LS_INFO) << "VideoReceiveStream::Config " << video_recv_config.ToString();
-            m_videoRecvStream = m_call->CreateVideoReceiveStream(std::move(video_recv_config));
+            m_videoRecvStream = call()->CreateVideoReceiveStream(std::move(video_recv_config));
             m_videoRecvStream->Start();
-            m_call->SignalChannelNetworkState(webrtc::MediaType::VIDEO, webrtc::NetworkState::kNetworkUp);
+            call()->SignalChannelNetworkState(webrtc::MediaType::VIDEO, webrtc::NetworkState::kNetworkUp);
         }
     });
 }
+
+int32_t VideoReceiveAdaptorImpl::RequestKeyFrame() {
+    // m_videoRecvStream->GenerateKeyFrame();
+    m_isRequestingKeyFrame = true;
+    return 0;
+}
+
+std::vector<webrtc::SdpVideoFormat> VideoReceiveAdaptorImpl::GetSupportedFormats() const {
+    return std::vector<webrtc::SdpVideoFormat>{
+        webrtc::SdpVideoFormat(
+            webrtc::CodecTypeToPayloadString(webrtc::VideoCodecType::kVideoCodecVP8)),
+        webrtc::SdpVideoFormat(
+            webrtc::CodecTypeToPayloadString(webrtc::VideoCodecType::kVideoCodecVP9)),
+        webrtc::SdpVideoFormat(
+            webrtc::CodecTypeToPayloadString(webrtc::VideoCodecType::kVideoCodecH264)),
+        webrtc::SdpVideoFormat(
+            webrtc::CodecTypeToPayloadString(webrtc::VideoCodecType::kVideoCodecH265))
+    };
+}
+
+std::unique_ptr<webrtc::VideoDecoder> VideoReceiveAdaptorImpl::CreateVideoDecoder(
+    const webrtc::SdpVideoFormat& format) {
+    return std::make_unique<AdaptorDecoder>(this);
+}
+
+int VideoReceiveAdaptorImpl::onRtpData(char* data, int len) {
+    std::shared_ptr<DataPacket> wp =
+        std::make_shared<DataPacket>(data, len);
+    taskQueue()->PostTask([this, wp]() {
+        if (call()) {
+            call()->Receiver()->DeliverPacket(
+                webrtc::MediaType::VIDEO,
+                rtc::CopyOnWriteBuffer(wp->data, wp->length),
+                rtc::TimeUTCMicros());
+        }
+    });
+    return len;
+}
+
+bool VideoReceiveAdaptorImpl::SendRtp(const uint8_t* data, size_t len, const webrtc::PacketOptions& options) {
+    return true;
+}
+
+bool VideoReceiveAdaptorImpl::SendRtcp(const uint8_t* data, size_t len) {
+    if (m_rtcpListener) {
+        m_rtcpListener->onAdaptorData(data, len);
+        return true;
+    }
+    return false;
+}
+
+} // namespace rtc_adaptor

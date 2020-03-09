@@ -22,14 +22,11 @@ class VideoReceiveAdaptorImpl : public VideoReceiveAdaptor,
                                 public webrtc::VideoDecoderFactory,
                                 public webrtc::Transport {
 public:
-    VideoReceiveAdaptorImpl(CallOwner* owner);
+    VideoReceiveAdaptorImpl(CallOwner* owner,  const RtcAdaptor::Config& config);
 
     // Implement VideoReceiveAdaptor
     int onRtpData(char* data, int len) override;
     void requestKeyFrame() override;
-    void setFrameListener(AdaptorFrameListener*) override;
-    void setFeedbackListener(AdaptorDataLisenter*) override;
-    void setAdaptorStatsListener(AdaptorStatsListener*) override;
 
     // Implements rtc::VideoSinkInterface<VideoFrame>.
     void OnFrame(const webrtc::VideoFrame& video_frame) override;
@@ -68,19 +65,30 @@ private:
         uint32_t m_bufferSize;
     };
 
+    void CreateReceiveVideo();
+
+    std::unique_ptr<webrtc::Call> call() {
+        return m_owner ? m_owner->call() : nullptr;
+    }
+    std::unique_ptr<rtc::TaskQueue> taskQueue() {
+        return m_owner ? m_owner->taskQueue() : nullptr;
+    }
+
     bool m_enableDump;
-    uint32_t m_ssrc;
+    RtcAdaptor::Config m_config;
     // Video Statistics collected in decoder thread
     FrameFormat m_format;
     uint16_t m_width;
     uint16_t m_height;
     // Listeners
     AdaptorFrameListener* m_frameListener;
-    AdaptorDataLisenter* m_feedbackListener;
+    AdaptorDataLisenter* m_rtcpListener;
     AdaptorStatsListener* m_statsListener;
 
     std::atomic<bool> m_isWaitingKeyFrame;
     CallOwner* m_owner;
+
+    webrtc::VideoReceiveStream* m_videoRecvStream = nullptr;
 };
 
 } // namespace rtc_adaptor
