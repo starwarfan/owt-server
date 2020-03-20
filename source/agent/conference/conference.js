@@ -1541,15 +1541,15 @@ var Conference = function (rpcClient, selfRpcId) {
       return Promise.reject('Stream is NOT ready');
     }
 
-    if (streams[streamId].info.inViews.indexOf(toView) !== -1) {
-      return Promise.resolve('ok');
-    }
+    // if (streams[streamId].info.inViews.indexOf(toView) !== -1) {
+    //   return Promise.resolve('ok');
+    // }
 
     return new Promise((resolve, reject) => {
       roomController.mix(streamId, toView, function() {
-        if (streams[streamId].info.inViews.indexOf(toView) === -1) {
-          streams[streamId].info.inViews.push(toView);
-        }
+        // if (streams[streamId].info.inViews.indexOf(toView) === -1) {
+        //   streams[streamId].info.inViews.push(toView);
+        // }
         resolve('ok');
       }, function(reason) {
         log.info('roomController.mix failed, reason:', reason);

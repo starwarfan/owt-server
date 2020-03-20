@@ -1581,6 +1581,60 @@ module.exports.create = function (spec, on_init_ok, on_init_failed) {
         }
     };
 
+   var getDefaultMixedVideo = function (stream_view_id, on_ok, on_error) {
+        let view = getViewOfMixStream(stream_view_id);
+        if (view) {
+            let video_format = mix_views[view].video.supported_formats.encode[0];
+            let resolution = 'unspecified';
+            let framerate = 'unspecified';
+            let bitrate = 'unspecified';
+            let keyFrameInterval = 'unspecified';
+            if (video_format) {
+                getMixedVideo(view, video_format, resolution, framerate, bitrate, keyFrameInterval,
+                    function ok_cb(mixed_id) {
+                        on_ok(mixed_id);
+                    }, on_error);
+            } else {
+                on_error();
+            }
+        } else {
+            on_error();
+        }
+    };
+
+    that.mix = function (stream_id, toView, on_ok, on_error) {
+        log.debug('mix, stream_id:', stream_id, 'to view:', toView);
+        if (!mix_views[toView]) {
+            return on_error('Invalid view');
+        }
+        // Enable mixed stream mixing
+        getDefaultMixedVideo(stream_id, (mix_internal_id) => {
+            mixStream(mix_internal_id, toView, on_ok, on_error);
+        }, () => {
+            if (!streams[stream_id]) {
+                return on_error('Invalid stream');
+            }
+            mixStream(stream_id, toView, on_ok, on_error);
+        });
+    };
+
+    that.unmix = function (stream_id, fromView, on_ok, on_error) {
+        log.debug('unmix, stream_id:', stream_id, 'from view:', fromView);
+        if (!mix_views[fromView]) {
+            return on_error('Invalid view');
+        }
+        // Enable mixed stream mixing
+        getDefaultMixedVideo(stream_id, (mix_internal_id) => {
+            unmixStream(mix_internal_id, fromView);
+            on_ok();
+        }, () => {
+            if (!streams[stream_id]) {
+                return on_error('Invalid stream');
+            }
+            unmixStream(stream_id, fromView);
+            on_ok();
+        });
+    };/* 
     that.mix = function (stream_id, toView, on_ok, on_error) {
         log.debug('mix, stream_id:', stream_id, 'to view:', toView);
         if (!mix_views[toView]) {
@@ -1602,7 +1656,7 @@ module.exports.create = function (spec, on_init_ok, on_init_failed) {
         }
         unmixStream(stream_id, fromView);
         on_ok();
-    };
+    };*/
 
     that.getRegion = function (stream_id, fromView, on_ok, on_error) {
         log.debug('getRegion, stream_id:', stream_id, 'fromView', fromView);
