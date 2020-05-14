@@ -155,10 +155,10 @@ function filterH264Payload(sdpObj, formatPreference = {}, direction) {
               break;
             } else {
               // For subscribe connection
-              if (optionals.findIndex((fmt) => (fmt.profile === prf)) > -1) {
+              if (!finalProfile &&
+                  optionals.findIndex((fmt) => (fmt.profile === prf)) > -1) {
                 finalProfile = prf;
                 selectedPayload = fmtp.payload;
-                break;
               }
             }
           } else {
