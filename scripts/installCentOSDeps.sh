@@ -57,11 +57,13 @@ installRepo(){
 }
 
 install_mediadeps_nonfree(){
+  install_srt
   install_fdkaac
   install_ffmpeg
 }
 
 install_mediadeps(){
+  install_srt
   install_ffmpeg
 }
 

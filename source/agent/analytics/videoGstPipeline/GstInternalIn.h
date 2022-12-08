@@ -21,6 +21,7 @@ public:
 
     void onFrame(const owt_base::Frame& frame);
     void setPushData(bool status);
+    void setFramerate(int framerate);
 
 private:
     bool m_start;
