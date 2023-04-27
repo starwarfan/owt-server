@@ -7,7 +7,7 @@
 
 using namespace v8;
 
-void InitAll(Handle<Object> exports) {
+void InitAll(Local<Object> exports) {
   InternalQuicIn::Init(exports);
   InternalQuicOut::Init(exports);
 }

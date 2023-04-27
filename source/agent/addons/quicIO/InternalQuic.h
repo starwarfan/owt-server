@@ -7,8 +7,7 @@
 
 #include "QuicTransport.h"
 #include "MediaFramePipelineWrapper.h"
-#include <node.h>
-#include <node_object_wrap.h>
+#include <nan.h>
 
 /*
  * Wrapper class of QuicIn
@@ -17,20 +16,21 @@
  */
 class InternalQuicIn : public FrameSource {
  public:
-  static void Init(v8::Local<v8::Object> exports);
+  static NAN_MODULE_INIT(Init);
   QuicIn* me;
 
  private:
   InternalQuicIn();
   ~InternalQuicIn();
-  static v8::Persistent<v8::Function> constructor;
 
-  static void New(const v8::FunctionCallbackInfo<v8::Value>& args);
-  static void close(const v8::FunctionCallbackInfo<v8::Value>& args);
+  static Nan::Persistent<v8::Function> constructor;
 
-  static void getListeningPort(const v8::FunctionCallbackInfo<v8::Value>& args);
-  static void addDestination(const v8::FunctionCallbackInfo<v8::Value>& args);
-  static void removeDestination(const v8::FunctionCallbackInfo<v8::Value>& args);
+  static NAN_METHOD(New);
+  static NAN_METHOD(close);
+
+  static NAN_METHOD(getListeningPort);
+  static NAN_METHOD(addDestination);
+  static NAN_METHOD(removeDestination);
 };
 
 /*
@@ -40,16 +40,17 @@ class InternalQuicIn : public FrameSource {
  */
 class InternalQuicOut : public FrameDestination {
  public:
-  static void Init(v8::Local<v8::Object> exports);
+  static NAN_MODULE_INIT(Init);
   QuicOut* me;
 
  private:
   InternalQuicOut();
   ~InternalQuicOut();
-  static v8::Persistent<v8::Function> constructor;
 
-  static void New(const v8::FunctionCallbackInfo<v8::Value>& args);
-  static void close(const v8::FunctionCallbackInfo<v8::Value>& args);
+  static Nan::Persistent<v8::Function> constructor;
+
+  static NAN_METHOD(New);
+  static NAN_METHOD(close);
 };
 
 #endif  // INTERNAL_QUIC_H_

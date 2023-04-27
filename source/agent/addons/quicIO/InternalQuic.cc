@@ -8,76 +8,68 @@
 using namespace v8;
 
 // Class InternalQuicIn
-Persistent<Function> InternalQuicIn::constructor;
+Nan::Persistent<Function> InternalQuicIn::constructor;
+
 InternalQuicIn::InternalQuicIn() {};
 InternalQuicIn::~InternalQuicIn() {};
 
-void InternalQuicIn::Init(v8::Local<v8::Object> exports) {
-  Isolate* isolate = Isolate::GetCurrent();
-  // Prepare constructor template
-  Local<FunctionTemplate> tpl = FunctionTemplate::New(isolate, New);
-  tpl->SetClassName(String::NewFromUtf8(isolate, "InternalQuicIn"));
+NAN_MODULE_INIT(InternalQuicIn::Init) {
+  // Constructor template
+  Local<FunctionTemplate> tpl = Nan::New<FunctionTemplate>(New);
+  tpl->SetClassName(Nan::New("InternalQuicIn").ToLocalChecked());
   tpl->InstanceTemplate()->SetInternalFieldCount(1);
-  // Prototype
-  NODE_SET_PROTOTYPE_METHOD(tpl, "close", close);
-  NODE_SET_PROTOTYPE_METHOD(tpl, "getListeningPort", getListeningPort);
-  NODE_SET_PROTOTYPE_METHOD(tpl, "addDestination", addDestination);
-  NODE_SET_PROTOTYPE_METHOD(tpl, "removeDestination", removeDestination);
 
-  constructor.Reset(isolate, tpl->GetFunction());
-  exports->Set(String::NewFromUtf8(isolate, "in"), tpl->GetFunction());
+  // Prototype
+  Nan::SetPrototypeMethod(tpl, "close", close);
+  Nan::SetPrototypeMethod(tpl, "getListeningPort", getListeningPort);
+  Nan::SetPrototypeMethod(tpl, "addDestination", addDestination);
+  Nan::SetPrototypeMethod(tpl, "removeDestination", removeDestination);
+
+  constructor.Reset(Nan::GetFunction(tpl).ToLocalChecked());
+  Nan::Set(target, Nan::New("in").ToLocalChecked(),
+           Nan::GetFunction(tpl).ToLocalChecked());
 }
 
-void InternalQuicIn::New(const FunctionCallbackInfo<Value>& args) {
-  Isolate* isolate = Isolate::GetCurrent();
-  HandleScope scope(isolate);
-
-  String::Utf8Value param0(args[0]->ToString());
+NAN_METHOD(InternalQuicIn::New) {
+  Nan::Utf8String param0(Nan::To<v8::String>(info[0]).ToLocalChecked());
   std::string cert_file = std::string(*param0);
-  String::Utf8Value param1(args[1]->ToString());
+  Nan::Utf8String param1(Nan::To<v8::String>(info[0]).ToLocalChecked());
   std::string key_file = std::string(*param1);
 
   InternalQuicIn* obj = new InternalQuicIn();
   obj->me = new QuicIn(cert_file, key_file);
   obj->src = obj->me;
 
-  obj->Wrap(args.This());
-  args.GetReturnValue().Set(args.This());
+  obj->Wrap(info.This());
+  info.GetReturnValue().Set(info.This());
 }
 
-void InternalQuicIn::close(const FunctionCallbackInfo<Value>& args) {
-  Isolate* isolate = Isolate::GetCurrent();
-  HandleScope scope(isolate);
-  InternalQuicIn* obj = ObjectWrap::Unwrap<InternalQuicIn>(args.Holder());
+NAN_METHOD(InternalQuicIn::close) {
+  InternalQuicIn* obj = ObjectWrap::Unwrap<InternalQuicIn>(info.Holder());
   delete obj->me;
   obj->me = nullptr;
   obj->src = nullptr;
   obj->src = nullptr;
 }
 
-void InternalQuicIn::getListeningPort(const FunctionCallbackInfo<Value>& args) {
-  Isolate* isolate = Isolate::GetCurrent();
-  HandleScope scope(isolate);
-
-  InternalQuicIn* obj = ObjectWrap::Unwrap<InternalQuicIn>(args.This());
+NAN_METHOD(InternalQuicIn::getListeningPort) {
+  InternalQuicIn* obj = ObjectWrap::Unwrap<InternalQuicIn>(info.This());
   QuicIn* me = obj->me;
 
   uint32_t port = me->getListeningPort();
 
-  args.GetReturnValue().Set(Number::New(isolate, port));
+  info.GetReturnValue().Set(Nan::New(port));
 }
 
-void InternalQuicIn::addDestination(const FunctionCallbackInfo<Value>& args) {
-  Isolate* isolate = Isolate::GetCurrent();
-  HandleScope scope(isolate);
-
-  InternalQuicIn* obj = ObjectWrap::Unwrap<InternalQuicIn>(args.Holder());
+NAN_METHOD(InternalQuicIn::addDestination) {
+  InternalQuicIn* obj = ObjectWrap::Unwrap<InternalQuicIn>(info.Holder());
   QuicIn* me = obj->me;
 
-  String::Utf8Value param0(args[0]->ToString());
+  Nan::Utf8String param0(Nan::To<v8::String>(info[0]).ToLocalChecked());
   std::string track = std::string(*param0);
 
-  FrameDestination* param = ObjectWrap::Unwrap<FrameDestination>(args[1]->ToObject());
+  FrameDestination* param = ObjectWrap::Unwrap<FrameDestination>(
+      Nan::To<v8::Object>(info[1]).ToLocalChecked());
   owt_base::FrameDestination* dest = param->dest;
 
   if (track == "audio") {
@@ -87,17 +79,15 @@ void InternalQuicIn::addDestination(const FunctionCallbackInfo<Value>& args) {
   }
 }
 
-void InternalQuicIn::removeDestination(const FunctionCallbackInfo<Value>& args) {
-  Isolate* isolate = Isolate::GetCurrent();
-  HandleScope scope(isolate);
-
-  InternalQuicIn* obj = ObjectWrap::Unwrap<InternalQuicIn>(args.Holder());
+NAN_METHOD(InternalQuicIn::removeDestination) {
+  InternalQuicIn* obj = ObjectWrap::Unwrap<InternalQuicIn>(info.Holder());
   QuicIn* me = obj->me;
 
-  String::Utf8Value param0(args[0]->ToString());
+  Nan::Utf8String param0(Nan::To<v8::String>(info[0]).ToLocalChecked());
   std::string track = std::string(*param0);
 
-  FrameDestination* param = ObjectWrap::Unwrap<FrameDestination>(args[1]->ToObject());
+  FrameDestination* param = ObjectWrap::Unwrap<FrameDestination>(
+      Nan::To<v8::Object>(info[1]).ToLocalChecked());
   owt_base::FrameDestination* dest = param->dest;
 
   if (track == "audio") {
@@ -108,43 +98,39 @@ void InternalQuicIn::removeDestination(const FunctionCallbackInfo<Value>& args) 
 }
 
 // Class InternalQuicOut
-Persistent<Function> InternalQuicOut::constructor;
+Nan::Persistent<Function> InternalQuicOut::constructor;
 InternalQuicOut::InternalQuicOut() {};
 InternalQuicOut::~InternalQuicOut() {};
 
-void InternalQuicOut::Init(v8::Local<v8::Object> exports) {
-  Isolate* isolate = Isolate::GetCurrent();
-  // Prepare constructor template
-  Local<FunctionTemplate> tpl = FunctionTemplate::New(isolate, New);
-  tpl->SetClassName(String::NewFromUtf8(isolate, "InternalQuicOut"));
+NAN_MODULE_INIT(InternalQuicOut::Init) {
+  // Constructor template
+  Local<FunctionTemplate> tpl = Nan::New<FunctionTemplate>(New);
+  tpl->SetClassName(Nan::New("InternalQuicOut").ToLocalChecked());
   tpl->InstanceTemplate()->SetInternalFieldCount(1);
-  // Prototype
-  NODE_SET_PROTOTYPE_METHOD(tpl, "close", close);
 
-  constructor.Reset(isolate, tpl->GetFunction());
-  exports->Set(String::NewFromUtf8(isolate, "out"), tpl->GetFunction());
+  // Prototype
+  Nan::SetPrototypeMethod(tpl, "close", close);
+
+  constructor.Reset(Nan::GetFunction(tpl).ToLocalChecked());
+  Nan::Set(target, Nan::New("out").ToLocalChecked(),
+           Nan::GetFunction(tpl).ToLocalChecked());
 }
 
-void InternalQuicOut::New(const v8::FunctionCallbackInfo<v8::Value>& args) {
-  Isolate* isolate = Isolate::GetCurrent();
-  HandleScope scope(isolate);
-
-  String::Utf8Value param0(args[0]->ToString());
+NAN_METHOD(InternalQuicOut::New) {
+  Nan::Utf8String param0(Nan::To<v8::String>(info[0]).ToLocalChecked());
   std::string ip = std::string(*param0);
-  int port = args[1]->Uint32Value();
+  int port = Nan::To<unsigned int>(info[1]).FromJust();
 
   InternalQuicOut* obj = new InternalQuicOut();
   obj->me = new QuicOut(ip, port);
   obj->dest = obj->me;
 
-  obj->Wrap(args.This());
-  args.GetReturnValue().Set(args.This());
+  obj->Wrap(info.This());
+  info.GetReturnValue().Set(info.This());
 }
 
-void InternalQuicOut::close(const v8::FunctionCallbackInfo<v8::Value>& args) {
-  Isolate* isolate = Isolate::GetCurrent();
-  HandleScope scope(isolate);
-  InternalQuicOut* obj = ObjectWrap::Unwrap<InternalQuicOut>(args.Holder());
+NAN_METHOD(InternalQuicOut::close) {
+  InternalQuicOut* obj = ObjectWrap::Unwrap<InternalQuicOut>(info.Holder());
   delete obj->me;
   obj->me = nullptr;
   obj->dest = nullptr;
